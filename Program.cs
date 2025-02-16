@@ -1,34 +1,31 @@
-using Microsoft.EntityFrameworkCore;
+using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
-using System.Text;
+using Microsoft.EntityFrameworkCore;
 using CreditGuardAPI.Data;
 using CreditGuardAPI.Services;
+using Microsoft.Extensions.Logging;
+using Microsoft.AspNetCore.Mvc;
+using Newtonsoft.Json;
+using Microsoft.OpenApi.Models;
+using System.Reflection;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
-builder.Services.AddControllers();
-
-// Configure SQLite Database Context
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlite(builder.Configuration.GetConnectionString("CreditGuardConnStr")));
-
-// Configure CORS
-var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>();
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy("CreditGuardCorsPolicy", builder =>
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
     {
-        builder
-            .WithOrigins(allowedOrigins)
-            .AllowAnyMethod()
-            .AllowAnyHeader()
-            .AllowCredentials();
+        options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
     });
-});
 
-// Configure JWT Authentication
+// Configure SQLite DbContext
+builder.Services.AddDbContext<ApplicationDbContext>(options =>
+    options.UseSqlite(builder.Configuration.GetConnectionString("CreditGuardConnStr"))
+    .EnableSensitiveDataLogging()
+    .EnableDetailedErrors());
+
+// Configure Authentication
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
@@ -48,12 +45,76 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 // Add Authorization
 builder.Services.AddAuthorization();
 
-// Add JWT Token Service
-builder.Services.AddScoped<JwtTokenService>();
+// Add Services
+builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<ApplicationDbContext>();
 
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
+// Add Logging
+builder.Logging.AddConsole();
+builder.Logging.AddDebug();
+
+// Add Swagger
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc("v1", new OpenApiInfo 
+    { 
+        Title = "CreditGuard API", 
+        Version = "v1",
+        Description = "API for CreditGuard Application",
+        Contact = new OpenApiContact
+        {
+            Name = "CreditGuard Support",
+            Email = "support@creditguard.com"
+        }
+    });
+
+    // Add JWT Authentication to Swagger
+    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Name = "Authorization",
+        Type = SecuritySchemeType.Http,
+        Scheme = "bearer",
+        BearerFormat = "JWT",
+        In = ParameterLocation.Header,
+        Description = "JWT Authorization header using the Bearer scheme."
+    });
+
+    c.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference
+                {
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            new string[] {}
+        }
+    });
+
+    // Set the comments path for the Swagger JSON and UI
+    var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
+    var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
+    c.IncludeXmlComments(xmlPath);
+});
+
+// Add CORS
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAngularApp",
+        builder => builder
+            .WithOrigins(
+                "http://localhost:4200", 
+                "https://localhost:4200",
+                "http://localhost:7777", 
+                "https://localhost:7777")
+            .AllowAnyMethod()
+            .AllowAnyHeader()
+            .AllowCredentials());
+});
 
 var app = builder.Build();
 
@@ -61,15 +122,21 @@ var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
-    app.UseSwaggerUI();
+    app.UseSwaggerUI(c => 
+    {
+        c.SwaggerEndpoint("/swagger/v1/swagger.json", "CreditGuard API v1");
+        c.RoutePrefix = "swagger"; // Ensures Swagger UI is available at the root URL
+    });
+    app.UseDeveloperExceptionPage();
 }
 
 app.UseHttpsRedirection();
+app.UseRouting();
 
-// Add CORS middleware before Authentication and Authorization
-app.UseCors("CreditGuardCorsPolicy");
+// Add CORS
+app.UseCors("AllowAngularApp");
 
-// Add Authentication and Authorization middleware
+// Add Authentication & Authorization
 app.UseAuthentication();
 app.UseAuthorization();
 
@@ -83,8 +150,3 @@ using (var scope = app.Services.CreateScope())
 }
 
 app.Run();
-
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}

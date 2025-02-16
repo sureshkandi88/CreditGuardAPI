@@ -18,33 +18,58 @@ namespace CreditGuardAPI.Data
         public DbSet<EmiTransaction> EmiTransactions { get; set; }
         public DbSet<CustomerGroup> CustomerGroups { get; set; }
 
-        // Method to safely migrate database without data loss
-        public void MigrateDatabase()
-        {
-            // Ensure the database is created
-            Database.EnsureCreated();
-
-            // Check if there are any pending migrations
-            var pendingMigrations = Database.GetPendingMigrations();
-            
-            // If there are pending migrations, apply them
-            if (pendingMigrations.Any())
-            {
-                Database.Migrate();
-            }
-        }
-
-        // Override OnModelCreating to configure model relationships and constraints
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
 
-            // Ensure Aadhaar number is unique
-            modelBuilder.Entity<Customer>()
-                .HasIndex(c => c.AadhaarNumber)
-                .IsUnique();
+            // User configuration
+            modelBuilder.Entity<User>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Id).ValueGeneratedOnAdd();
+                entity.Property(e => e.Username)
+                    .IsRequired()
+                    .HasMaxLength(50)
+                    .HasAnnotation("RegularExpression", @"^[a-zA-Z0-9_]+$");
+                entity.Property(e => e.Email)
+                    .IsRequired()
+                    .HasMaxLength(100);
+                entity.Property(e => e.PasswordHash)
+                    .IsRequired()
+                    .HasMaxLength(100);
+                entity.HasIndex(e => e.Username).IsUnique();
+                entity.HasIndex(e => e.Email).IsUnique();
+            });
 
-            // Configure Many-to-Many relationship between Customer and Group
+            // Customer configuration
+            modelBuilder.Entity<Customer>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.AadhaarNumber).IsRequired().HasMaxLength(12);
+                entity.HasIndex(e => e.AadhaarNumber).IsUnique();
+            });
+
+            // Group configuration
+            modelBuilder.Entity<Group>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Name).IsRequired().HasMaxLength(100);
+            });
+
+            // Debt configuration
+            modelBuilder.Entity<Debt>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.TotalAmount).HasColumnType("decimal(18,2)");
+                entity.Property(e => e.RemainingAmount).HasColumnType("decimal(18,2)");
+                entity.Property(e => e.EMIAmount).HasColumnType("decimal(18,2)");
+                
+                entity.HasOne(d => d.Group)
+                    .WithMany(g => g.Debts)
+                    .HasForeignKey(d => d.GroupId);
+            });
+
+            // CustomerGroup configuration
             modelBuilder.Entity<CustomerGroup>()
                 .HasKey(cg => new { cg.CustomerId, cg.GroupId });
 
@@ -58,36 +83,37 @@ namespace CreditGuardAPI.Data
                 .WithMany(g => g.CustomerGroups)
                 .HasForeignKey(cg => cg.GroupId);
 
-            // Configure Group to Debt relationship
-            modelBuilder.Entity<Debt>()
-                .HasOne(d => d.Group)
-                .WithMany(g => g.Debts)
-                .HasForeignKey(d => d.GroupId);
+            // EMI Transaction configuration
+            modelBuilder.Entity<EmiTransaction>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.EMIAmount).HasColumnType("decimal(18,2)");
+                entity.Property(e => e.PaidAmount).HasColumnType("decimal(18,2)");
 
-            // Configure Customer to EMI Transaction relationship
-            modelBuilder.Entity<EmiTransaction>()
-                .HasOne(et => et.Customer)
-                .WithMany(c => c.EmiTransactions)
-                .HasForeignKey(et => et.CustomerId);
+                entity.HasOne(et => et.Debt)
+                    .WithMany(d => d.EmiTransactions)
+                    .HasForeignKey(et => et.DebtId);
 
-            // Configure Debt to EMI Transaction relationship
-            modelBuilder.Entity<EmiTransaction>()
-                .HasOne(et => et.Debt)
-                .WithMany(d => d.EmiTransactions)
-                .HasForeignKey(et => et.DebtId);
+                entity.HasOne(et => et.Customer)
+                    .WithMany(c => c.EmiTransactions)
+                    .HasForeignKey(et => et.CustomerId);
 
-            // Configure Group to EMI Transaction relationship
-            modelBuilder.Entity<EmiTransaction>()
-                .HasOne(et => et.Group)
-                .WithMany(g => g.EmiTransactions)
-                .HasForeignKey(et => et.GroupId);
+                entity.HasOne(et => et.Group)
+                    .WithMany(g => g.EmiTransactions)
+                    .HasForeignKey(et => et.GroupId);
+            });
+        }
 
-            // Configure Active Group for Customer
-            modelBuilder.Entity<Customer>()
-                .HasOne(c => c.ActiveGroup)
-                .WithMany(g => g.ActiveCustomers)
-                .HasForeignKey(c => c.ActiveGroupId)
-                .IsRequired(false);
+        // Optional method for database migration
+        public void MigrateDatabase()
+        {
+            Database.EnsureCreated();
+            var pendingMigrations = Database.GetPendingMigrations();
+            
+            if (pendingMigrations.Any())
+            {
+                Database.Migrate();
+            }
         }
     }
 }

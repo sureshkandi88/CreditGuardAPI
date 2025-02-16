@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using CreditGuardAPI.Data;
+using Microsoft.AspNetCore.Authorization;
 using CreditGuardAPI.Models;
 using CreditGuardAPI.Services;
 
@@ -10,79 +9,66 @@ namespace CreditGuardAPI.Controllers
     [ApiController]
     public class AuthController : ControllerBase
     {
-        private readonly ApplicationDbContext _context;
-        private readonly JwtTokenService _tokenService;
+        private readonly IAuthService _authService;
+        private readonly ILogger<AuthController> _logger;
 
-        public AuthController(ApplicationDbContext context, JwtTokenService tokenService)
+        public AuthController(
+            IAuthService authService, 
+            ILogger<AuthController> logger)
         {
-            _context = context;
-            _tokenService = tokenService;
+            _authService = authService;
+            _logger = logger;
         }
 
         [HttpPost("register")]
+        [AllowAnonymous]
         public async Task<IActionResult> Register([FromBody] RegisterDto registerDto)
         {
-            // Check if username already exists
-            if (await _context.Users.AnyAsync(u => u.Username == registerDto.Username))
+            try
             {
-                return BadRequest("Username already exists");
+                var response = await _authService.RegisterAsync(registerDto);
+                _logger.LogInformation($"User {registerDto.Username} registered successfully");
+                return CreatedAtAction(nameof(Register), response);
             }
-
-            var user = new User
+            catch (ApplicationException ex)
             {
-                Username = registerDto.Username,
-                PasswordHash = PasswordHasher.HashPassword(registerDto.Password),
-                SecretQuestion = registerDto.SecretQuestion,
-                SecretAnswer = registerDto.SecretAnswer
-            };
-
-            _context.Users.Add(user);
-            await _context.SaveChangesAsync();
-
-            return Ok("User registered successfully");
+                _logger.LogWarning($"Registration failed: {ex.Message}");
+                return BadRequest(new { message = ex.Message });
+            }
         }
 
         [HttpPost("login")]
+        [AllowAnonymous]
         public async Task<IActionResult> Login([FromBody] LoginDto loginDto)
         {
-            var user = await _context.Users.FirstOrDefaultAsync(u => u.Username == loginDto.Username);
-
-            if (user == null || !PasswordHasher.VerifyPassword(user.PasswordHash, loginDto.Password))
+            try
             {
-                return Unauthorized("Invalid username or password");
+                var response = await _authService.LoginAsync(loginDto);
+                _logger.LogInformation($"User {loginDto.Username} logged in successfully");
+                return Ok(response);
             }
-
-            // Update last login time
-            user.LastLoginAt = DateTime.UtcNow;
-            await _context.SaveChangesAsync();
-
-            // Generate JWT token
-            var token = _tokenService.GenerateJwtToken(user);
-
-            return Ok(new { Token = token, Role = user.Role });
+            catch (UnauthorizedAccessException ex)
+            {
+                _logger.LogWarning($"Login failed: {ex.Message}");
+                return Unauthorized(new { message = ex.Message });
+            }
         }
 
         [HttpPost("forgot-password")]
+        [AllowAnonymous]
         public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordDto forgotPasswordDto)
         {
-            var user = await _context.Users.FirstOrDefaultAsync(u => u.Username == forgotPasswordDto.Username);
-
-            if (user == null)
+            try
             {
-                return NotFound("User not found");
+                var result = await _authService.ForgotPasswordAsync(forgotPasswordDto);
+                _logger.LogInformation($"Password reset for user {forgotPasswordDto.Username}");
+                return Ok(new { message = "Password reset successful" });
             }
-
-            // Verify secret answer
-            if (user.SecretAnswer.ToLower() != forgotPasswordDto.SecretAnswer.ToLower())
+            catch (Exception ex)
             {
-                return BadRequest("Incorrect secret answer");
+                _logger.LogWarning($"Password reset failed: {ex.Message}");
+                return BadRequest(new { message = ex.Message });
             }
-
-            // Update password
-            user.PasswordHash = PasswordHasher.HashPassword(forgotPasswordDto.NewPassword);
-            await _context.SaveChangesAsync();
-
-            return Ok("Password reset successfully");
         }
     }
 }
