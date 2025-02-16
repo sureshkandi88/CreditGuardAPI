@@ -1,0 +1,6 @@
+@CreditGuardAPI_HostAddress = http://localhost:5243
+
+GET {{CreditGuardAPI_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
