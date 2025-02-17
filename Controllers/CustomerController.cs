@@ -3,6 +3,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authorization;
 using CreditGuardAPI.Data;
 using CreditGuardAPI.Models;
+using CreditGuardAPI.Dtos;
+using System.IO;
 
 namespace CreditGuardAPI.Controllers
 {
@@ -12,25 +14,67 @@ namespace CreditGuardAPI.Controllers
     public class CustomerController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
+        private readonly IWebHostEnvironment _environment;
 
-        public CustomerController(ApplicationDbContext context)
+        public CustomerController(ApplicationDbContext context, IWebHostEnvironment environment)
         {
             _context = context;
+            _environment = environment;
         }
 
         [HttpPost]
-        public async Task<ActionResult<Customer>> CreateCustomer([FromBody] Customer customer)
+        public async Task<ActionResult<Customer>> CreateCustomer([FromForm] CustomerDto customerDto)
         {
             // Validate unique Aadhaar number
-            if (await _context.Customers.AnyAsync(c => c.AadhaarNumber == customer.AadhaarNumber))
+            if (await _context.Customers.AnyAsync(c => c.AadhaarNumber == customerDto.AadhaarNumber))
             {
                 return Conflict("A customer with this Aadhaar number already exists.");
+            }
+
+            // Create customer from DTO
+            var customer = new Customer
+            {
+                Name = $"{customerDto.FirstName} {customerDto.LastName}",
+                AadhaarNumber = customerDto.AadhaarNumber,
+                PhoneNumber = customerDto.PhoneNumber,
+                Address = $"{customerDto.Address.Street}, {customerDto.Address.City}, {customerDto.Address.State} - {customerDto.Address.PinCode}"
+            };
+
+            // Handle file uploads
+            if (customerDto.ProfilePhoto != null)
+            {
+                customer.ProfilePhotoPath = await SaveFile(customerDto.ProfilePhoto, "ProfilePhotos");
+            }
+
+            if (customerDto.AadhaarPhoto != null)
+            {
+                customer.AadhaarPhotoPath = await SaveFile(customerDto.AadhaarPhoto, "AadhaarPhotos");
             }
 
             _context.Customers.Add(customer);
             await _context.SaveChangesAsync();
 
             return CreatedAtAction(nameof(GetCustomer), new { id = customer.Id }, customer);
+        }
+
+        private async Task<string> SaveFile(IFormFile file, string folderName)
+        {
+            // Ensure the directory exists
+            var uploadFolder = Path.Combine(_environment.WebRootPath, folderName);
+            Directory.CreateDirectory(uploadFolder);
+
+            // Generate unique filename
+            var uniqueFileName = Guid.NewGuid().ToString() + "_" + file.FileName;
+            var filePath = Path.Combine(uploadFolder, uniqueFileName);
+
+            // Save the file
+            using (var fileStream = new FileStream(filePath, FileMode.Create))
+            {
+                await file.CopyToAsync(fileStream);
+            }
+
+            // Return relative path
+            return Path.Combine(folderName, uniqueFileName);
         }
 
         [HttpGet]
