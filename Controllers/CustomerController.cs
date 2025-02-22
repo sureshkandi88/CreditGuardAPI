@@ -34,10 +34,14 @@ namespace CreditGuardAPI.Controllers
             // Create customer from DTO
             var customer = new Customer
             {
-                Name = $"{customerDto.FirstName} {customerDto.LastName}",
+                FirstName = customerDto.FirstName,
+                LastName = customerDto.LastName,
                 AadhaarNumber = customerDto.AadhaarNumber,
                 PhoneNumber = customerDto.PhoneNumber,
-                Address = $"{customerDto.Address.Street}, {customerDto.Address.City}, {customerDto.Address.State} - {customerDto.Address.PinCode}"
+                Street = customerDto.Address.Street,
+                City = customerDto.Address.City,
+                State = customerDto.Address.State,
+                PinCode = customerDto.Address.PinCode
             };
 
             // Handle file uploads
@@ -78,12 +82,34 @@ namespace CreditGuardAPI.Controllers
         }
 
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Customer>>> GetCustomers()
+        public async Task<ActionResult<PaginatedResponse<Customer>>> GetCustomers(
+            [FromQuery] int page = 1, 
+            [FromQuery] int pageSize = 10)
         {
-            return await _context.Customers
+            Thread.Sleep(3000);
+            var totalCustomers = await _context.Customers.CountAsync();
+            var customers = await _context.Customers
                 .Include(c => c.CustomerGroups)
                 .Include(c => c.ActiveGroup)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
                 .ToListAsync();
+
+            return new PaginatedResponse<Customer>
+            {
+                Data = customers,
+                Total = totalCustomers,
+                Page = page,
+                PageSize = pageSize
+            };
+        }
+
+        public class PaginatedResponse<T>
+        {
+            public List<T> Data { get; set; }
+            public int Total { get; set; }
+            public int Page { get; set; }
+            public int PageSize { get; set; }
         }
 
         [HttpGet("{id}")]

@@ -10,7 +10,10 @@ namespace CreditGuardAPI.Models
 
         [Required]
         [StringLength(100)]
-        public string Name { get; set; }
+        public string FirstName { get; set; }
+
+        [StringLength(100)]
+        public string? LastName { get; set; }
 
         [Required]
         [StringLength(12)]
@@ -21,7 +24,16 @@ namespace CreditGuardAPI.Models
         public string? PhoneNumber { get; set; }
 
         [StringLength(200)]
-        public string? Address { get; set; }
+        public string? Street { get; set; }
+
+        [StringLength(100)]
+        public string? City { get; set; }
+
+        [StringLength(100)]
+        public string? State { get; set; }
+
+        [StringLength(10)]
+        public string? PinCode { get; set; }
 
         [StringLength(500)]
         public string? ProfilePhotoPath { get; set; }
@@ -40,6 +52,11 @@ namespace CreditGuardAPI.Models
 
         // One-to-Many relationship with EMI Transactions
         public ICollection<EmiTransaction> EmiTransactions { get; set; }
+
+        // Optional: Add a computed full address property
+        [NotMapped]
+        public string FullAddress => 
+            $"{Street}, {City}, {State} - {PinCode}";
     }
 
     // Join entity for Many-to-Many relationship between Customer and Group
