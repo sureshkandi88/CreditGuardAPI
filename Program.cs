@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.EntityFrameworkCore;
@@ -58,9 +58,9 @@ builder.Logging.AddDebug();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
-    c.SwaggerDoc("v1", new OpenApiInfo 
-    { 
-        Title = "CreditGuard API", 
+    c.SwaggerDoc("v1", new OpenApiInfo
+    {
+        Title = "CreditGuard API",
         Version = "v1",
         Description = "API for CreditGuard Application",
         Contact = new OpenApiContact
@@ -99,63 +99,63 @@ builder.Services.AddSwaggerGen(c =>
     // Set the comments path for the Swagger JSON and UI
     var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
     var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
-    c.IncludeXmlComments(xmlPath);
+    if (File.Exists(xmlPath))
+    {
+        c.IncludeXmlComments(xmlPath);
+    }
 });
 
 // Add CORS
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowAngularApp", builder =>
+    options.AddPolicy("AllowAngularApp", policy =>
     {
-        builder.WithOrigins("http://localhost:4200", "https://localhost:4200")
-               .AllowAnyHeader()
-               .AllowAnyMethod()
-               .AllowCredentials();
+        policy.WithOrigins("http://localhost:4200", "https://localhost:4200")
+              .AllowAnyHeader()
+              .AllowAnyMethod()
+              .AllowCredentials();
     });
 });
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI(c => 
-    {
-        c.SwaggerEndpoint("/swagger/v1/swagger.json", "CreditGuard API v1");
-        c.RoutePrefix = "swagger"; // Ensures Swagger UI is available at the root URL
-    });
-    app.UseDeveloperExceptionPage();
-}
-
-// Disable HTTPS redirection in Azure (handled by the platform)
-if (!app.Environment.IsDevelopment())
-{
-    app.UseForwardedHeaders(new ForwardedHeadersOptions
-    {
-        ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
-    });
-    // Helps with reverse proxy handling
-}
-else
-{
-    app.UseHttpsRedirection();
-}
-
-// Add CORS middleware
-app.UseCors("AllowAngularApp");
-
-// Add Authentication & Authorization
-app.UseAuthentication();
-app.UseAuthorization();
-
-app.MapControllers();
-
-// Safely migrate database
+// ✅ Run DB Migration before starting app
 using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
     dbContext.Database.Migrate();
 }
+
+// ✅ Configure Swagger
+app.UseSwagger();
+app.UseSwaggerUI(c =>
+{
+    c.SwaggerEndpoint("/swagger/v1/swagger.json", "CreditGuard API v1");
+    c.RoutePrefix = string.Empty; // Swagger at root URL
+});
+
+// ✅ Developer Exception Page (only in Development)
+if (app.Environment.IsDevelopment())
+{
+    app.UseDeveloperExceptionPage();
+}
+else
+{
+    // ✅ Handle HTTPS in Azure
+    app.UseForwardedHeaders(new ForwardedHeadersOptions
+    {
+        ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+    });
+}
+
+// ✅ CORS Middleware
+app.UseCors("AllowAngularApp");
+
+// ✅ Authentication & Authorization
+app.UseAuthentication();
+app.UseAuthorization();
+
+// ✅ Map Controllers
+app.MapControllers();
 
 app.Run();
