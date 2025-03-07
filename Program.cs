@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
 using Microsoft.OpenApi.Models;
 using System.Reflection;
+using Microsoft.AspNetCore.HttpOverrides;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -127,7 +128,19 @@ if (app.Environment.IsDevelopment())
     app.UseDeveloperExceptionPage();
 }
 
-app.UseHttpsRedirection();
+// Disable HTTPS redirection in Azure (handled by the platform)
+if (!app.Environment.IsDevelopment())
+{
+    app.UseForwardedHeaders(new ForwardedHeadersOptions
+    {
+        ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+    });
+    // Helps with reverse proxy handling
+}
+else
+{
+    app.UseHttpsRedirection();
+}
 
 // Add CORS middleware
 app.UseCors("AllowAngularApp");
