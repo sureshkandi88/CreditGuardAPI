@@ -41,7 +41,7 @@ namespace CreditGuardAPI.Controllers
                 Street = customerDto.Street,
                 City = customerDto.City,
                 State = customerDto.State,
-                PinCode = customerDto.PinCode,
+                
                 Location = customerDto.Location
             };
 

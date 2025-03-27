@@ -37,11 +37,7 @@ namespace CreditGuardAPI.Dtos
         [StringLength(50)]
         public string? Location { get; set; }
 
-        [Required]
-        [StringLength(6)]
-        [RegularExpression(@"^\d{6}$", ErrorMessage = "PIN code must be 6 digits")]
-        public string PinCode { get; set; }
-
+        
         public IFormFile? ProfilePhoto { get; set; }
         public IFormFile? AadhaarPhoto { get; set; }
     }

@@ -35,8 +35,7 @@ namespace CreditGuardAPI.Models
         [StringLength(50)]
         public string State { get; set; }
 
-        public string PinCode { get; set; }
-        
+                
         public string? Location { get; set; }
 
         public string? ProfilePhotoPath { get; set; }
@@ -58,7 +57,7 @@ namespace CreditGuardAPI.Models
         // Optional: Add a computed full address property
         [NotMapped]
         public string FullAddress => 
-            $"{Street}, {City}, {State} - {PinCode}";
+            $"{Street}, {City}, {State}";
     }
 
     // Join entity for Many-to-Many relationship between Customer and Group
