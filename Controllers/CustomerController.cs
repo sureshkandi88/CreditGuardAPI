@@ -38,10 +38,11 @@ namespace CreditGuardAPI.Controllers
                 LastName = customerDto.LastName,
                 AadhaarNumber = customerDto.AadhaarNumber,
                 PhoneNumber = customerDto.PhoneNumber,
-                Street = customerDto.Address.Street,
-                City = customerDto.Address.City,
-                State = customerDto.Address.State,
-                PinCode = customerDto.Address.PinCode
+                Street = customerDto.Street,
+                City = customerDto.City,
+                State = customerDto.State,
+                PinCode = customerDto.PinCode,
+                Location = customerDto.Location
             };
 
             // Handle file uploads

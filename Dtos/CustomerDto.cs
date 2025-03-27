@@ -9,9 +9,8 @@ namespace CreditGuardAPI.Dtos
         [StringLength(50)]
         public string FirstName { get; set; }
 
-        [Required]
         [StringLength(50)]
-        public string LastName { get; set; }
+        public string? LastName { get; set; }
 
         [Required]
         [Phone]
@@ -23,14 +22,6 @@ namespace CreditGuardAPI.Dtos
         [RegularExpression(@"^\d{12}$", ErrorMessage = "Aadhaar number must be 12 digits")]
         public string AadhaarNumber { get; set; }
 
-        public AddressDto Address { get; set; }
-
-        public IFormFile? ProfilePhoto { get; set; }
-        public IFormFile? AadhaarPhoto { get; set; }
-    }
-
-    public class AddressDto
-    {
         [Required]
         [StringLength(200)]
         public string Street { get; set; }
@@ -43,8 +34,15 @@ namespace CreditGuardAPI.Dtos
         [StringLength(50)]
         public string State { get; set; }
 
+        [StringLength(50)]
+        public string? Location { get; set; }
+
         [Required]
-        [RegularExpression(@"^\d{6}$", ErrorMessage = "Pin code must be 6 digits")]
+        [StringLength(6)]
+        [RegularExpression(@"^\d{6}$", ErrorMessage = "PIN code must be 6 digits")]
         public string PinCode { get; set; }
+
+        public IFormFile? ProfilePhoto { get; set; }
+        public IFormFile? AadhaarPhoto { get; set; }
     }
 }
