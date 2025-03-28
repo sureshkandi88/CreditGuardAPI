@@ -1,10 +1,14 @@
+﻿using System;
 using Microsoft.EntityFrameworkCore.Migrations;
-using System;
 
-namespace CreditGuardAPI.Data
+#nullable disable
+
+namespace CreditGuardAPI.Migrations.StaticFilesDb
 {
-    public partial class InitializeStaticFilesDb : Migration
+    /// <inheritdoc />
+    public partial class InitialCreate : Migration
     {
+        /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.CreateTable(
@@ -31,6 +35,7 @@ namespace CreditGuardAPI.Data
                 columns: new[] { "RelatedEntityType", "RelatedEntityId" });
         }
 
+        /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropTable(

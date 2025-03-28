@@ -11,8 +11,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CreditGuardAPI.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20250327201331_RemovePinCode")]
-    partial class RemovePinCode
+    [Migration("20250328144752_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -31,13 +31,13 @@ namespace CreditGuardAPI.Migrations
                         .HasMaxLength(12)
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("AadhaarPhotoPath")
-                        .HasColumnType("TEXT");
+                    b.Property<int?>("AadhaarPictureId")
+                        .HasColumnType("INTEGER");
 
                     b.Property<int?>("ActiveGroupId")
                         .HasColumnType("INTEGER");
 
-                    b.Property<string>("City")
+                    b.Property<string>("CityName")
                         .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("TEXT");
@@ -61,8 +61,8 @@ namespace CreditGuardAPI.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("ProfilePhotoPath")
-                        .HasColumnType("TEXT");
+                    b.Property<int?>("ProfilePictureId")
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("State")
                         .IsRequired()

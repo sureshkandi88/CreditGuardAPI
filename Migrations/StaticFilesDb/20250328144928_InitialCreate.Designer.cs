@@ -11,8 +11,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CreditGuardAPI.Migrations.StaticFilesDb
 {
     [DbContext(typeof(StaticFilesDbContext))]
-    [Migration("20250328130639_InitializeStaticFilesDb")]
-    partial class InitializeStaticFilesDb
+    [Migration("20250328144928_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)

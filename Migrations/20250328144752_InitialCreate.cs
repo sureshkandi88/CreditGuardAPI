@@ -35,9 +35,12 @@ namespace CreditGuardAPI.Migrations
                         .Annotation("Sqlite:Autoincrement", true),
                     Username = table.Column<string>(type: "TEXT", maxLength: 50, nullable: false),
                     PasswordHash = table.Column<string>(type: "TEXT", maxLength: 100, nullable: false),
+                    Email = table.Column<string>(type: "TEXT", maxLength: 100, nullable: false),
+                    Role = table.Column<string>(type: "TEXT", maxLength: 50, nullable: false),
+                    FirstName = table.Column<string>(type: "TEXT", maxLength: 50, nullable: false),
+                    LastName = table.Column<string>(type: "TEXT", maxLength: 50, nullable: false),
                     SecretQuestion = table.Column<string>(type: "TEXT", maxLength: 100, nullable: false),
                     SecretAnswer = table.Column<string>(type: "TEXT", maxLength: 100, nullable: false),
-                    Role = table.Column<int>(type: "INTEGER", nullable: false),
                     IsActive = table.Column<bool>(type: "INTEGER", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
                     LastLoginAt = table.Column<DateTime>(type: "TEXT", nullable: true)
@@ -53,10 +56,16 @@ namespace CreditGuardAPI.Migrations
                 {
                     Id = table.Column<int>(type: "INTEGER", nullable: false)
                         .Annotation("Sqlite:Autoincrement", true),
-                    Name = table.Column<string>(type: "TEXT", maxLength: 100, nullable: false),
+                    FirstName = table.Column<string>(type: "TEXT", maxLength: 50, nullable: false),
+                    LastName = table.Column<string>(type: "TEXT", maxLength: 50, nullable: true),
                     AadhaarNumber = table.Column<string>(type: "TEXT", maxLength: 12, nullable: false),
-                    PhoneNumber = table.Column<string>(type: "TEXT", maxLength: 15, nullable: true),
-                    Address = table.Column<string>(type: "TEXT", maxLength: 200, nullable: true),
+                    PhoneNumber = table.Column<string>(type: "TEXT", nullable: false),
+                    Street = table.Column<string>(type: "TEXT", maxLength: 200, nullable: false),
+                    CityName = table.Column<string>(type: "TEXT", maxLength: 50, nullable: false),
+                    State = table.Column<string>(type: "TEXT", maxLength: 50, nullable: false),
+                    Location = table.Column<string>(type: "TEXT", nullable: true),
+                    ProfilePictureId = table.Column<int>(type: "INTEGER", nullable: true),
+                    AadhaarPictureId = table.Column<int>(type: "INTEGER", nullable: true),
                     IsActive = table.Column<bool>(type: "INTEGER", nullable: false),
                     ActiveGroupId = table.Column<int>(type: "INTEGER", nullable: true)
                 },
@@ -197,6 +206,18 @@ namespace CreditGuardAPI.Migrations
                 name: "IX_EmiTransactions_GroupId",
                 table: "EmiTransactions",
                 column: "GroupId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Users_Email",
+                table: "Users",
+                column: "Email",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Users_Username",
+                table: "Users",
+                column: "Username",
+                unique: true);
         }
 
         /// <inheritdoc />

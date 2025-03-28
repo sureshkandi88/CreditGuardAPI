@@ -5,7 +5,7 @@
 namespace CreditGuardAPI.Migrations
 {
     /// <inheritdoc />
-    public partial class EnhanceUserModelValidation : Migration
+    public partial class UpdateModels : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)

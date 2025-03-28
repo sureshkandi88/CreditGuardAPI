@@ -109,8 +109,10 @@ namespace CreditGuardAPI.Controllers
                 var customers = await _context.Customers
                     .Include(c => c.CustomerGroups)
                     .Include(c => c.ActiveGroup)
+                    .OrderBy(c => c.Id)
                     .Skip((page - 1) * pageSize)
                     .Take(pageSize)
+                    .AsNoTracking()
                     .ToListAsync();
 
                 return new PaginatedResponse<Customer>
