@@ -127,12 +127,11 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-// Apply database migrations
+// ✅ Run DB Migration before starting app
 using (var scope = app.Services.CreateScope())
 {
-    var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
-    DatabaseMigrationHelper.MigrateDatabase<ApplicationDbContext>(app.Services, logger);
-    DatabaseMigrationHelper.MigrateDatabase<StaticFilesDbContext>(app.Services, logger);
+    var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    dbContext.Database.Migrate();
 }
 
 // ✅ Configure Swagger
