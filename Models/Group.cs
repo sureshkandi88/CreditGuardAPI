@@ -19,6 +19,10 @@ namespace CreditGuardAPI.Models
 
         public bool IsActive { get; set; } = true;
 
+        [Required]
+        [StringLength(200)]
+        public string Location { get; set; }
+
         // Navigation properties
         // Many-to-Many relationship with Customers
         public ICollection<CustomerGroup> CustomerGroups { get; set; }
