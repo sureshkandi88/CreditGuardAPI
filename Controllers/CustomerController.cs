@@ -5,6 +5,7 @@ using CreditGuardAPI.Data;
 using CreditGuardAPI.Models;
 using CreditGuardAPI.Dtos;
 using System.IO;
+using CreditGuardAPI.Services;
 
 namespace CreditGuardAPI.Controllers
 {
@@ -14,12 +15,12 @@ namespace CreditGuardAPI.Controllers
     public class CustomerController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
-        private readonly IWebHostEnvironment _environment;
+        private readonly IStaticFileService _staticFileService;
 
-        public CustomerController(ApplicationDbContext context, IWebHostEnvironment environment)
+        public CustomerController(ApplicationDbContext context, IStaticFileService staticFileService)
         {
             _context = context;
-            _environment = environment;
+            _staticFileService = staticFileService;
         }
 
         [HttpPost]
@@ -39,7 +40,7 @@ namespace CreditGuardAPI.Controllers
                 AadhaarNumber = customerDto.AadhaarNumber,
                 PhoneNumber = customerDto.PhoneNumber,
                 Street = customerDto.Street,
-                City = customerDto.City,
+                CityName = customerDto.CityName,
                 State = customerDto.State,
                 
                 Location = customerDto.Location
@@ -47,13 +48,47 @@ namespace CreditGuardAPI.Controllers
 
             // Handle file uploads
             if (customerDto.ProfilePhoto != null)
-            {
-                customer.ProfilePhotoPath = await SaveFile(customerDto.ProfilePhoto, "ProfilePhotos");
+            {                
+                try
+                {
+                    using (var memoryStream = new MemoryStream())
+                    {
+                        await customerDto.ProfilePhoto.CopyToAsync(memoryStream);
+                        customer.ProfilePictureId = await _staticFileService.SaveFileAsync(
+                            memoryStream.ToArray(),
+                            customerDto.ProfilePhoto.FileName,
+                            customerDto.ProfilePhoto.ContentType,
+                            "Customer",
+                            customer.Id
+                        );
+                    }
+                }
+                catch (FileSizeLimitExceededException ex)
+                {
+                    return BadRequest($"Profile photo: {ex.Message}");
+                }
             }
 
             if (customerDto.AadhaarPhoto != null)
-            {
-                customer.AadhaarPhotoPath = await SaveFile(customerDto.AadhaarPhoto, "AadhaarPhotos");
+            {                
+                try
+                {
+                    using (var memoryStream = new MemoryStream())
+                    {
+                        await customerDto.AadhaarPhoto.CopyToAsync(memoryStream);
+                        customer.AadhaarPictureId = await _staticFileService.SaveFileAsync(
+                            memoryStream.ToArray(),
+                            customerDto.AadhaarPhoto.FileName,
+                            customerDto.AadhaarPhoto.ContentType,
+                            "Customer",
+                            customer.Id
+                        );
+                    }
+                }
+                catch (FileSizeLimitExceededException ex)
+                {
+                    return BadRequest($"Aadhaar photo: {ex.Message}");
+                }
             }
 
             _context.Customers.Add(customer);
@@ -62,25 +97,7 @@ namespace CreditGuardAPI.Controllers
             return CreatedAtAction(nameof(GetCustomer), new { id = customer.Id }, customer);
         }
 
-        private async Task<string> SaveFile(IFormFile file, string folderName)
-        {
-            // Ensure the directory exists
-            var uploadFolder = Path.Combine(_environment.WebRootPath, folderName);
-            Directory.CreateDirectory(uploadFolder);
-
-            // Generate unique filename
-            var uniqueFileName = Guid.NewGuid().ToString() + "_" + file.FileName;
-            var filePath = Path.Combine(uploadFolder, uniqueFileName);
-
-            // Save the file
-            using (var fileStream = new FileStream(filePath, FileMode.Create))
-            {
-                await file.CopyToAsync(fileStream);
-            }
-
-            // Return relative path
-            return Path.Combine(folderName, uniqueFileName);
-        }
+        
 
         [HttpGet]
         public async Task<ActionResult<PaginatedResponse<Customer>>> GetCustomers(
@@ -130,20 +147,79 @@ namespace CreditGuardAPI.Controllers
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateCustomer(int id, [FromBody] Customer updatedCustomer)
+        public async Task<IActionResult> UpdateCustomer(int id, [FromForm] CustomerDto customerDto)
         {
-            if (id != updatedCustomer.Id)
+            var existingCustomer = await _context.Customers.FindAsync(id);
+            if (existingCustomer == null)
             {
-                return BadRequest();
+                return NotFound();
             }
 
-            // Check if Aadhaar number is unique (excluding current customer)
-            if (await _context.Customers.AnyAsync(c => c.AadhaarNumber == updatedCustomer.AadhaarNumber && c.Id != id))
-            {
-                return Conflict("A customer with this Aadhaar number already exists.");
-            }
+            // Update properties from DTO
+            existingCustomer.FirstName = customerDto.FirstName;
+            existingCustomer.LastName = customerDto.LastName;
+            existingCustomer.AadhaarNumber = customerDto.AadhaarNumber;
+            existingCustomer.PhoneNumber = customerDto.PhoneNumber;
+            existingCustomer.Street = customerDto.Street;
+            existingCustomer.CityName = customerDto.CityName;
+            existingCustomer.State = customerDto.State;
+            existingCustomer.Location = customerDto.Location;
 
-            _context.Entry(updatedCustomer).State = EntityState.Modified;
+            // Handle file upload updates
+            if (customerDto.ProfilePhoto != null)
+            {                
+                try
+                {
+                    // Delete old profile picture if exists
+                    if (existingCustomer.ProfilePictureId.HasValue)
+                    {
+                        await _staticFileService.DeleteFileAsync(existingCustomer.ProfilePictureId.Value);
+                    }
+
+                    using (var memoryStream = new MemoryStream())
+                    {
+                        await customerDto.ProfilePhoto.CopyToAsync(memoryStream);
+                        existingCustomer.ProfilePictureId = await _staticFileService.SaveFileAsync(
+                            memoryStream.ToArray(),
+                            customerDto.ProfilePhoto.FileName,
+                            customerDto.ProfilePhoto.ContentType,
+                            "Customer",
+                            existingCustomer.Id
+                        );
+                    }
+                }
+                catch (FileSizeLimitExceededException ex)
+                {
+                    return BadRequest($"Profile photo: {ex.Message}");
+                }
+            }
+            if (customerDto.AadhaarPhoto != null)
+            {                
+                try
+                {
+                    // Delete old Aadhaar picture if exists
+                    if (existingCustomer.AadhaarPictureId.HasValue)
+                    {
+                        await _staticFileService.DeleteFileAsync(existingCustomer.AadhaarPictureId.Value);
+                    }
+
+                    using (var memoryStream = new MemoryStream())
+                    {
+                        await customerDto.AadhaarPhoto.CopyToAsync(memoryStream);
+                        existingCustomer.AadhaarPictureId = await _staticFileService.SaveFileAsync(
+                            memoryStream.ToArray(),
+                            customerDto.AadhaarPhoto.FileName,
+                            customerDto.AadhaarPhoto.ContentType,
+                            "Customer",
+                            existingCustomer.Id
+                        );
+                    }
+                }
+                catch (FileSizeLimitExceededException ex)
+                {
+                    return BadRequest($"Aadhaar photo: {ex.Message}");
+                }
+            }
 
             try
             {

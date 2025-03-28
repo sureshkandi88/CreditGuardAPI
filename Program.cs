@@ -26,6 +26,12 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
     .EnableSensitiveDataLogging()
     .EnableDetailedErrors());
 
+// Configure Static Files SQLite DbContext
+builder.Services.AddDbContext<StaticFilesDbContext>(options =>
+    options.UseSqlite(builder.Configuration.GetConnectionString("StaticFilesConnStr"))
+    .EnableSensitiveDataLogging()
+    .EnableDetailedErrors());
+
 // Configure Authentication
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
@@ -48,7 +54,9 @@ builder.Services.AddAuthorization();
 
 // Add Services
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IStaticFileService, StaticFileService>();
 builder.Services.AddScoped<ApplicationDbContext>();
+builder.Services.AddScoped<StaticFilesDbContext>();
 
 // Add Logging
 builder.Logging.AddConsole();

@@ -28,7 +28,7 @@ namespace CreditGuardAPI.Dtos
 
         [Required]
         [StringLength(50)]
-        public string City { get; set; }
+        public string CityName { get; set; }
 
         [Required]
         [StringLength(50)]

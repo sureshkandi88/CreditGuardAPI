@@ -17,10 +17,11 @@ namespace CreditGuardAPI.Models
 
         [Required]
         [StringLength(12)]
-        [RegularExpression(@"^\d{12}$", ErrorMessage = "Aadhaar number must be 12 digits")]
+        [RegularExpression(@"^\d{12}$", ErrorMessage = "Aadhaar number must be exactly 12 numeric digits")]
         public string AadhaarNumber { get; set; }
 
         [Required]
+        [RegularExpression(@"^\+91\d{10}$", ErrorMessage = "Phone number must be in +91XXXXXXXXXX format")]
         public string PhoneNumber { get; set; }
 
         [Required]
@@ -29,7 +30,7 @@ namespace CreditGuardAPI.Models
 
         [Required]
         [StringLength(50)]
-        public string City { get; set; }
+        public string CityName { get; set; }
 
         [Required]
         [StringLength(50)]
@@ -38,9 +39,8 @@ namespace CreditGuardAPI.Models
                 
         public string? Location { get; set; }
 
-        public string? ProfilePhotoPath { get; set; }
-
-        public string? AadhaarPhotoPath { get; set; }
+        public int? ProfilePictureId { get; set; }
+        public int? AadhaarPictureId { get; set; }
 
         public bool IsActive { get; set; } = true;
 
@@ -57,7 +57,7 @@ namespace CreditGuardAPI.Models
         // Optional: Add a computed full address property
         [NotMapped]
         public string FullAddress => 
-            $"{Street}, {City}, {State}";
+            $"{Street}, {CityName}, {State}";
     }
 
     // Join entity for Many-to-Many relationship between Customer and Group
