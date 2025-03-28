@@ -104,22 +104,26 @@ namespace CreditGuardAPI.Controllers
             [FromQuery] int page = 1, 
             [FromQuery] int pageSize = 10)
         {
-            Thread.Sleep(3000);
-            var totalCustomers = await _context.Customers.CountAsync();
-            var customers = await _context.Customers
-                .Include(c => c.CustomerGroups)
-                .Include(c => c.ActiveGroup)
-                .Skip((page - 1) * pageSize)
-                .Take(pageSize)
-                .ToListAsync();
+            try{
+                var totalCustomers = await _context.Customers.CountAsync();
+                var customers = await _context.Customers
+                    .Include(c => c.CustomerGroups)
+                    .Include(c => c.ActiveGroup)
+                    .Skip((page - 1) * pageSize)
+                    .Take(pageSize)
+                    .ToListAsync();
 
-            return new PaginatedResponse<Customer>
-            {
-                Data = customers,
-                Total = totalCustomers,
-                Page = page,
-                PageSize = pageSize
-            };
+                return new PaginatedResponse<Customer>
+                {
+                    Data = customers,
+                    Total = totalCustomers,
+                    Page = page,
+                    PageSize = pageSize
+                };
+            }
+            catch (Exception ex){
+                return BadRequest(ex.Message);
+            }
         }
 
         public class PaginatedResponse<T>
